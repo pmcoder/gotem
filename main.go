@@ -246,25 +246,25 @@ func findDependencyVersion(depInfo *DepInfo) error {
 		return errors.New("Unsupported repo type " + depInfo.DcvsType)
 	}
 
-	tagOut, err := exec.Command("git", "describe --tags").Output()
+	tagOut, err := exec.Command("git", "describe", "--tags").Output()
 	if err != nil {
 		fmt.Println("Error looking for tag... moving to revision num", err)
 		err = nil
 	} else {
-		if len(tagOut) > 0 {
-			depInfo.Version = string(tagOut)
+		if len(tagOut) > 0 && string(tagOut[0:5]) != "fatal" {
+			depInfo.Version = string(tagOut[:len(tagOut)-1])
 			return nil
 		}
 	}
 
-	idOut, err := exec.Command("git", "rev-parse HEAD").Output()
+	idOut, err := exec.Command("git", "rev-parse", "HEAD").Output()
 	if err != nil {
 		fmt.Println("Error finding revision num.... giving up", err)
 		return err
 	}
 
 	if len(idOut) > 0 {
-		depInfo.Version = string(idOut)
+		depInfo.Version = string(idOut[:len(idOut)-1])
 	} else {
 		fmt.Println("Could not get tag or version")
 		return errors.New("Could not get tag or version")
