@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dchest/uniuri"
+	//"github.com/dchest/uniuri"
 )
 
 //TO create a new file from deps already in place
@@ -107,26 +107,38 @@ func getGoPath() string {
 func walkGoPathForRemotes(r []string, goPath string) {
 
 	depInfos := []DepInfo{}
-
-	goSrc := filepath.Join(goPath, "src")
+	goPaths := strings.Split(goPath, ":")
 
 	for _, remote := range r {
-		remotePath := filepath.Join(goSrc, remote)
-		fmt.Printf("Checking path %s\n", remotePath)
-		//make sure the dir is there
-		_, err := os.Stat(remotePath)
-		if err != nil {
-			fmt.Println(err)
-			if os.IsNotExist(err) {
-				//mark as not go gotten... maybe even go get it
-				fmt.Printf("%s does not exist\n", remotePath)
-				continue
+		remotePath := ""
+		for _, gp := range goPaths {
+			remotePath = filepath.Join(gp, "src", remote)
+			fmt.Printf("Checking path %s\n", remotePath)
+			//make sure the dir is there
+			_, err := os.Stat(remotePath)
+			if err != nil {
+				fmt.Println(err)
+				if os.IsNotExist(err) {
+					//mark as not go gotten... maybe even go get it
+					fmt.Printf("%s does not exist\n", remotePath)
+				}
+				//TODO do better existence check handling
 			}
+			break //the actual repo was found so don't keep searching gopath
 		}
+
+		if remotePath == "" {
+			fmt.Println("Can't find dep locally")
+			continue
+		}
+
 		depInfo := processDep(remote, remotePath)
 		depInfos = append(depInfos, *depInfo)
 		//copy the dir
-		copyDep(remote, remotePath)
+		err := copyDep(remote, remotePath)
+		if err != nil {
+			fmt.Println("Error copying files", err)
+		}
 		fmt.Println(remotePath)
 	}
 
@@ -159,7 +171,7 @@ func copyDep(remotePath, localPath string) error {
 
 	for _, obj := range object {
 		srcFile := filepath.Join(localPath, obj.Name())
-		destFile := filepath.Join("_gotem", "remotePath", obj.Name())
+		destFile := filepath.Join("_gotem", remotePath, obj.Name())
 
 		if obj.IsDir() {
 			err = copyDep(remotePath, srcFile)
@@ -273,22 +285,15 @@ func findDependencyVersion(depInfo *DepInfo) error {
 }
 
 func processDep(remotePath, localPath string) *DepInfo {
-	//get dep repo and info
 	depInfo := DepInfo{DcvsType: getDepRepo(localPath), Path: remotePath}
 
 	findDependencyVersion(&depInfo)
-	//write dep to gotem file
-
-	//copy deps to gotem dir
-
-	//link the deps into the go path from the gotem dir or add a src to
-	//the gotem dir and move the deps under than and add the gotem dir to the patc
 
 	return &depInfo
 }
 
 func main() {
-	uniuri.New()
+	//uniuri.New()
 	gl := getGoList()
 	fmt.Println("Deps:", gl.Deps)
 	r := findRemoteDeps(gl.Deps)
