@@ -252,13 +252,15 @@ func linkDepstToPath() {
 
 }
 
-func findDependencyVersion(depInfo *DepInfo) error {
+func findDependencyVersion(depInfo *DepInfo, localPath string) error {
 	//only handle git for now
 	if depInfo.DcvsType != "git" {
 		return errors.New("Unsupported repo type " + depInfo.DcvsType)
 	}
 
-	tagOut, err := exec.Command("git", "describe", "--tags").Output()
+	//http://stackoverflow.com/questions/3769137/use-git-log-command-in-another-folder
+	//going to need git 1.8.5 to pull this one off
+	tagOut, err := exec.Command("git", "-C", localPath, "describe", "--tags").Output()
 	if err != nil {
 		fmt.Println("Error looking for tag... moving to revision num", err)
 		err = nil
@@ -269,7 +271,7 @@ func findDependencyVersion(depInfo *DepInfo) error {
 		}
 	}
 
-	idOut, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	idOut, err := exec.Command("git", "-C", localPath, "rev-parse", "HEAD").Output()
 	if err != nil {
 		fmt.Println("Error finding revision num.... giving up", err)
 		return err
@@ -287,7 +289,7 @@ func findDependencyVersion(depInfo *DepInfo) error {
 func processDep(remotePath, localPath string) *DepInfo {
 	depInfo := DepInfo{DcvsType: getDepRepo(localPath), Path: remotePath}
 
-	findDependencyVersion(&depInfo)
+	findDependencyVersion(&depInfo, localPath)
 
 	return &depInfo
 }
