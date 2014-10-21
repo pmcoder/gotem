@@ -1,1 +1,3 @@
 Once project has all "go get"s in place and properly builds and runs, run gotem to vendor and lock versions. Gotem will automatially look for tags before version id's for version locking. Vendoring is done under _gotem/
+
+Its early, lacking and very need based. 
